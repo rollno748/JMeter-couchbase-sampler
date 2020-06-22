@@ -29,7 +29,7 @@ This plugin adds feature to Jmeter to load test couchbase no sql database using 
 
 ## References
 Below are the references which guided to build this plugin.
-[x] https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html
+- [x] https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html
 
 ## Tools used 
 * eclipse
