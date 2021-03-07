@@ -31,17 +31,17 @@ This plugin adds feature to Jmeter to load test couchbase no sql database using 
 Below are the references which guided to build this plugin.
 - [x] https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html
 
+
+## 💲 Donate
+<a href="https://www.buymeacoffee.com/rollno748" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me A Coffee" style="max-width:20%;" ></a> 
+
+Please rate a :star2: if you like it.
+
+Please open up a :beetle: - If you experienced something.
+
+
 ## Tools used 
 * eclipse
 * Markdown editor online (https://dillinger.io/)
-
-Please rate a :star2: if you like it. 
-
-
-
-
-
-
-
 
 
