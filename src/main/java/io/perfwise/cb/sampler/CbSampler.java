@@ -2,16 +2,22 @@ package io.perfwise.cb.sampler;
 
 import org.apache.jmeter.config.ConfigTestElement;
 import org.apache.jmeter.engine.util.ConfigMergabilityIndicator;
+import org.apache.jmeter.gui.Searchable;
 import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.samplers.Sampler;
 import org.apache.jmeter.testbeans.TestBean;
+import org.apache.jmeter.testelement.AbstractTestElement;
+import org.apache.jmeter.testelement.TestElement;
+import org.apache.jmeter.testelement.TestStateListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.couchbase.client.java.Cluster;
 
-public class CbSampler extends CbTestElement implements Sampler, TestBean, ConfigMergabilityIndicator {
+import java.io.Serializable;
+
+public class CbSampler extends AbstractTestElement implements Sampler, TestBean, ConfigMergabilityIndicator, TestStateListener, TestElement, Serializable, Searchable {
 
 	private static final long serialVersionUID = 9112846706008433268L;
 	private static Logger LOGGER = LoggerFactory.getLogger(CbSampler.class);
