@@ -23,17 +23,17 @@ public class BucketConfig extends ConfigTestElement
 		implements ConfigElement, TestBean, TestStateListener, Serializable {
 
 	private static final long serialVersionUID = -313826245020004586L;
+	private static final Logger LOGGER = LoggerFactory.getLogger(BucketConfig.class);
 
-	private static Logger LOGGER = LoggerFactory.getLogger(BucketConfig.class);
-
-	private Cluster cluster;
 	private Bucket bucket;
+	private Cluster cluster;
 	private String username;
 	private String password;
 	private String server;
 	private String bucketName;
 	private String bucketWaitUntilReadyTime;
 	private String bucketObject;
+	private String clusterObject;
 	private List<VariableSettings> extraConfigs;
 
 	public BucketConfig() {
@@ -48,7 +48,7 @@ public class BucketConfig extends ConfigTestElement
 		TestBeanHelper.prepare(this);
 		JMeterVariables variables = getThreadContext().getVariables();
 
-		LOGGER.debug("Additional Cofig Size::: " + getExtraConfigs().size());
+		LOGGER.debug("Additional config Size::: " + getExtraConfigs().size());
 		if (getExtraConfigs().size() >= 1) {
 			LOGGER.info("Setting up Additional properties");
 			for (int i = 0; i < getExtraConfigs().size(); i++) {
@@ -65,25 +65,11 @@ public class BucketConfig extends ConfigTestElement
 			synchronized (this) {
 				try {
 					cluster = Cluster.connect("couchbases://"+ getServer(), getClusterOptions(getUsername(), getPassword()));
+					variables.putObject(clusterObject, cluster);
 					LOGGER.info("Connection to couchbase cluster has been established");
 					try {
 						bucket = cluster.bucket(bucketName);
 						bucket.waitUntilReady(Duration.ofSeconds(Integer.parseInt(getBucketWaitUntilReadyTime())));
-
-//						//// Get a user defined collection reference
-//						Scope scope = bucket.scope("tenant_agent_00");
-//						Collection collection = scope.collection("users");
-//						// Get Document
-//						GetResult getResult = collection.get("0");
-//						String name = getResult.contentAsObject().getString("name");
-//						LOGGER.info("GET ::::::" + name); // name == "mike"
-//
-//						// Call the query() method on the scope object and store the result.
-//						Scope inventoryScope = bucket.scope("inventory");
-//						QueryResult result = inventoryScope.query("SELECT * FROM airline WHERE id = 10;");
-//						List<JsonObject> test = result.rowsAsObject();
-//						LOGGER.info("RESULT ::::::" + test.get(0));
-
 						variables.putObject(bucketObject, bucket);
 					} catch (CouchbaseException e) {
 						LOGGER.info("Exception while creating connection to bucket:" + e);
@@ -111,6 +97,7 @@ public class BucketConfig extends ConfigTestElement
 	public void testEnded() {
 		try {
 			cluster.disconnect();
+			LOGGER.info("Couchbase cluster connection - Disconnected successfully !");
 		} catch (Exception e) {
 			LOGGER.info("Exception occurred while closing the connection with couchbase server");
 		}
@@ -129,14 +116,6 @@ public class BucketConfig extends ConfigTestElement
 
 	public void setServer(String server) {
 		this.server = server;
-	}
-
-	public Bucket getBucket() {
-		return bucket;
-	}
-
-	public void setBucket(Bucket bucket) {
-		this.bucket = bucket;
 	}
 
 	public String getBucketName() {
@@ -185,6 +164,13 @@ public class BucketConfig extends ConfigTestElement
 
 	public void setBucketObject(String bucketObject) {
 		this.bucketObject = bucketObject;
+	}
+
+	public String getClusterObject(){
+		return clusterObject;
+	}
+	public void setClusterObject(String clusterObject){
+		this.clusterObject = clusterObject;
 	}
 
 }

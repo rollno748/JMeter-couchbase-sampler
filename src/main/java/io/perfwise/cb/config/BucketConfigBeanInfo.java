@@ -15,15 +15,12 @@ import org.slf4j.LoggerFactory;
 public class BucketConfigBeanInfo extends BeanInfoSupport {
 
 	private static Logger LOGGER = LoggerFactory.getLogger(BucketConfigBeanInfo.class);
-
 	private static final String SERVER="server";
 	private static final String USERNAME="username";
 	private static final String PASSWORD="password";
 	private static final String BUCKET="bucketName";
 	private static final String BUCKET_WAITUNTILREADYTIME= "bucketWaitUntilReadyTime";
 	private static final String BUCKET_OBJ= "bucketObject";
-
-
 
 	public BucketConfigBeanInfo() {
 		super(BucketConfig.class);
@@ -32,7 +29,6 @@ public class BucketConfigBeanInfo extends BeanInfoSupport {
 				new String[] { SERVER, USERNAME, PASSWORD, BUCKET, BUCKET_WAITUNTILREADYTIME, BUCKET_OBJ });
 		// Extra configs Table
 		createPropertyGroup("Additional Configs related to bucket ", new String[] { "extraConfigs" });
-
 
 		PropertyDescriptor propertyDescriptor = property(SERVER);
 		propertyDescriptor.setValue(NOT_UNDEFINED, Boolean.TRUE);
