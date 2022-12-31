@@ -1,9 +1,13 @@
 package io.perfwise.cb.sampler;
 
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.query.QueryResult;
 import org.apache.jmeter.config.ConfigTestElement;
@@ -28,6 +32,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+
 
 public class CBSampler extends AbstractTestElement implements Sampler, TestBean, ConfigMergabilityIndicator, TestStateListener, TestElement, Serializable, Searchable {
 
@@ -38,17 +44,15 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 			Arrays.asList("org.apache.jmeter.config.gui.SimpleConfigGui"));
 
 	private Cluster clusterObject;
-	private Bucket bucketObject;
+	private Bucket bucket;
 	private Scope scopeObject;
 	private Collection collectionObject;
-
-	private String bucket;
+	private String bucketObject;
 	private String scope;
 	private String collection;
 	private String queryTypeValue;
 	private String query;
 	private String parameters;
-
 	private final int operationInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
 
 	@Override
@@ -59,11 +63,11 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 					.getObject("clusterObject");
 			LOGGER.info("Cluster object ::: " + clusterObject);
 		}
-		if (operationInt > 0 && this.bucketObject == null) {
-			this.bucketObject = (Bucket) JMeterContextService.getContext().getVariables()
-					.getObject(getBucket());
-			LOGGER.info("Bucket object ::: " + bucketObject);
-			scopeObject = bucketObject.scope(getScope());
+		if (operationInt > 0 && this.bucket == null) {
+			this.bucket = (Bucket) JMeterContextService.getContext().getVariables()
+					.getObject(getBucketObject());
+			LOGGER.info("Bucket object ::: " + bucket);
+			scopeObject = bucket.scope(getScope());
 			collectionObject = (Collection) scopeObject.collection(getCollection());
 		}
 
@@ -76,36 +80,13 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		//Starting the measurement
 		result.sampleStart();
 		if(operationInt == 0){
-			QueryResult res = new Operations(clusterObject).queryOperations(getQuery());
+			QueryResult res = this.queryOperations(getQuery());
 			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
 		}else{
-			MutationResult res = new Operations(scopeObject, collectionObject).dataOperations(operationInt, getQuery());
+			MutationResult res = this.dataOperations(operationInt, getQuery());
 			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
 		}
-
 		result.sampleEnd();
-
-
-
-
-//		if (isGzipCompression()) {
-//			byteMsg = createEventCompressed(getMessage());
-//		} else {
-//			byteMsg = ByteString.copyFromUtf8(getMessage()).toByteArray();
-//		}
-
-		result.sampleStart();
-
-		try {
-//			template = createPubsubMessage(byteMsg, attributes);
-//			publish(template, result);
-
-		} catch (Exception ex) {
-			LOGGER.info("Exception occurred while publishing message");
-			result = handleException(result, ex);
-		} finally {
-			result.sampleEnd();
-		}
 		return result;
 	}
 
@@ -121,11 +102,6 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		result.setSuccessful(false);
 		return result;
 	}
-
-
-	//		if (this.bucket == null) {
-	//			this.bucket = (Bucket) JMeterContextService.getContext().getVariables().getObject(getBucketObject());
-	//		}
 
 	@Override
 	public void testStarted() {
@@ -150,10 +126,52 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		return APPLIABLE_CONFIG_CLASSES.contains(guiClass);
 	}
 
+	public MutationResult dataOperations(int type, String data){
+		JsonObject content = JsonObject.fromJson(data);
+		MutationResult result = null;
+
+		switch (type){
+			case CBSamplerBeanInfo.INSERT:
+				try{
+//                    result = collectionObject.insert(key, json);
+				}catch (DocumentNotFoundException ex){
+					LOGGER.info("Document not found");
+				}
+				break;
+			case CBSamplerBeanInfo.GET:
+				GetResult getResult = collectionObject.get(content.getString("key"));
+//                result = getResult.contentAsObject();
+				break;
+			case CBSamplerBeanInfo.UPSERT:
+//                result = collectionObject.upsert(key, json);
+				break;
+			case CBSamplerBeanInfo.REMOVE:
+				try{
+					collectionObject.remove(content.getString("key"));
+				}catch (DocumentNotFoundException dnfe){
+					LOGGER.error("Document not found exception " + dnfe);
+				}
+				break;
+			default:
+				LOGGER.info("Invalid operation Selected - Please check the sampler operation selection");
+				LOGGER.info("Aborting Test..");
+                testEnded();
+		}
+		return result;
+	}
+
+	public QueryResult queryOperations(String data){
+		QueryResult result = null;
+		try{
+			result = clusterObject.query(data, queryOptions().metrics(true));
+		}catch (CouchbaseException ce){
+			LOGGER.info("Couchbase exception occurred while w=executing N1ql query ");
+			ce.printStackTrace();
+		}
+		return result;
+	}
 
 	//Getters & Setters
-
-
 	public Cluster getClusterObject() {
 		return clusterObject;
 	}
@@ -162,11 +180,11 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		this.clusterObject = clusterObject;
 	}
 
-	public Bucket getBucketObject() {
+	public String getBucketObject() {
 		return bucketObject;
 	}
 
-	public void setBucketObject(Bucket bucketObject) {
+	public void setBucketObject(String bucketObject) {
 		this.bucketObject = bucketObject;
 	}
 
@@ -186,11 +204,11 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		this.collectionObject = collectionObject;
 	}
 
-	public String getBucket() {
+	public Bucket getBucket() {
 		return bucket;
 	}
 
-	public void setBucket(String bucket) {
+	public void setBucket(Bucket bucket) {
 		this.bucket = bucket;
 	}
 
@@ -236,3 +254,22 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 }
 
 
+
+//		if (isGzipCompression()) {
+//			byteMsg = createEventCompressed(getMessage());
+//		} else {
+//			byteMsg = ByteString.copyFromUtf8(getMessage()).toByteArray();
+//		}
+//		result.sampleStart();
+//				try {
+//			template = createPubsubMessage(byteMsg, attributes);
+//			publish(template, result);
+//				} catch (Exception ex) {
+//				LOGGER.info("Exception occurred while publishing message");
+//				result = handleException(result, ex);
+//				} finally {
+//				result.sampleEnd();
+//				}
+//		if (this.bucket == null) {
+//			this.bucket = (Bucket) JMeterContextService.getContext().getVariables().getObject(getBucketObject());
+//		}
