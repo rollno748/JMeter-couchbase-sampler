@@ -25,8 +25,6 @@ public class BucketConfig extends ConfigTestElement
 	private static final long serialVersionUID = -313826245020004586L;
 	private static final Logger LOGGER = LoggerFactory.getLogger(BucketConfig.class);
 
-	private Bucket bucket;
-	private Cluster cluster;
 	private String username;
 	private String password;
 	private String server;
@@ -34,6 +32,8 @@ public class BucketConfig extends ConfigTestElement
 	private String bucketWaitUntilReadyTime;
 	private String bucketObject;
 	private String clusterObject;
+	private Bucket bucket;
+	private Cluster cluster;
 	private List<VariableSettings> extraConfigs;
 
 	public BucketConfig() {

@@ -1,8 +1,11 @@
 package io.perfwise.cb.sampler;
 
 import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.query.QueryResult;
 import org.apache.jmeter.config.ConfigTestElement;
 import org.apache.jmeter.engine.util.ConfigMergabilityIndicator;
 import org.apache.jmeter.gui.Searchable;
@@ -33,38 +36,53 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 
 	private static final Set<String> APPLIABLE_CONFIG_CLASSES = new HashSet<>(
 			Arrays.asList("org.apache.jmeter.config.gui.SimpleConfigGui"));
+
+	private Cluster clusterObject;
 	private Bucket bucketObject;
-	private Scope scope;
-	private Collection collection;
+	private Scope scopeObject;
+	private Collection collectionObject;
+
+	private String bucket;
+	private String scope;
+	private String collection;
 	private String queryTypeValue;
 	private String query;
 	private String parameters;
 
+	private final int operationInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
+
 	@Override
 	public SampleResult sample(Entry e) {
 
-		if (this.bucketObject == null){
+		if (operationInt == 0 && this.clusterObject == null) {
+			this.clusterObject = (Cluster) JMeterContextService.getContext().getVariables()
+					.getObject("clusterObject");
+			LOGGER.info("Cluster object ::: " + clusterObject);
+		}
+		if (operationInt > 0 && this.bucketObject == null) {
 			this.bucketObject = (Bucket) JMeterContextService.getContext().getVariables()
-					.getObject(getBucketObject());
+					.getObject(getBucket());
+			LOGGER.info("Bucket object ::: " + bucketObject);
+			scopeObject = bucketObject.scope(getScope());
+			collectionObject = (Collection) scopeObject.collection(getCollection());
 		}
-		this.scope = bucketObject.scope((String) JMeterContextService.getContext().getVariables().getObject(getScope()));
-		this.collection = scope.collection((String) JMeterContextService.getContext().getVariables().getObject(getCollection()));
-		Operations operations = new Operations(this.scope, this.collection);
 
-
-		if (JMeterContextService.getContext().getVariables().getObject(getQueryTypeValue().toLowerCase()).equals("n1ql")){
-
-
-		}
 		SampleResult result = new SampleResult();
 		result.setSampleLabel(getName());
 		result.setSamplerData(requestBody());
 		result.setDataType(SampleResult.TEXT);
 		result.setContentType("text/plain");
 		result.setDataEncoding(StandardCharsets.UTF_8.name());
-
-
+		//Starting the measurement
 		result.sampleStart();
+		if(operationInt == 0){
+			QueryResult res = new Operations(clusterObject).queryOperations(getQuery());
+			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
+		}else{
+			MutationResult res = new Operations(scopeObject, collectionObject).dataOperations(operationInt, getQuery());
+			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
+		}
+
 		result.sampleEnd();
 
 
@@ -134,12 +152,46 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 
 
 	//Getters & Setters
-	public String getBucketObject() {
+
+
+	public Cluster getClusterObject() {
+		return clusterObject;
+	}
+
+	public void setClusterObject(Cluster clusterObject) {
+		this.clusterObject = clusterObject;
+	}
+
+	public Bucket getBucketObject() {
 		return bucketObject;
 	}
 
-	public void setBucketObject(String bucketObject) {
-		this.bucketObject = (Bucket) bucketObject;
+	public void setBucketObject(Bucket bucketObject) {
+		this.bucketObject = bucketObject;
+	}
+
+	public Scope getScopeObject() {
+		return scopeObject;
+	}
+
+	public void setScopeObject(Scope scopeObject) {
+		this.scopeObject = scopeObject;
+	}
+
+	public Collection getCollectionObject() {
+		return collectionObject;
+	}
+
+	public void setCollectionObject(Collection collectionObject) {
+		this.collectionObject = collectionObject;
+	}
+
+	public String getBucket() {
+		return bucket;
+	}
+
+	public void setBucket(String bucket) {
+		this.bucket = bucket;
 	}
 
 	public String getScope() {
@@ -147,18 +199,15 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	}
 
 	public void setScope(String scope) {
-//		this.scope = scope;
-		this.scope = bucketObject.scope((String) JMeterContextService.getContext().getVariables().getObject(getScope()));
+		this.scope = scope;
 	}
-
 
 	public String getCollection() {
 		return collection;
 	}
 
 	public void setCollection(String collection) {
-//		this.collection = collection;
-		this.collection = scope.collection((String) JMeterContextService.getContext().getVariables().getObject(getCollection()));
+		this.collection = collection;
 	}
 
 	public String getQueryTypeValue() {
@@ -184,7 +233,6 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	public void setParameters(String parameters) {
 		this.parameters = parameters;
 	}
-
 }
 
 

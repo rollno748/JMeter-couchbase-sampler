@@ -120,8 +120,7 @@ public class CBStringDoc extends AbstractJavaSamplerClient implements Serializab
 				java.io.StringWriter stringWriter = new java.io.StringWriter();
 				e.printStackTrace(new java.io.PrintWriter(stringWriter));
 				result.setResponseData(stringWriter.toString().getBytes());
-				result.setDataType(org.apache.jmeter.samplers.SampleResult.TEXT);	
-				
+				result.setDataType(org.apache.jmeter.samplers.SampleResult.TEXT);
 			}
 		} else {
 			LOGGER.info("Couchbase Client not initialised");
