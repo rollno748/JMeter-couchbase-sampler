@@ -176,10 +176,6 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		return clusterObject;
 	}
 
-	public void setClusterObject(Cluster clusterObject) {
-		this.clusterObject = clusterObject;
-	}
-
 	public String getBucketObject() {
 		return bucketObject;
 	}
@@ -192,24 +188,12 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		return scopeObject;
 	}
 
-	public void setScopeObject(Scope scopeObject) {
-		this.scopeObject = scopeObject;
-	}
-
 	public Collection getCollectionObject() {
 		return collectionObject;
 	}
 
-	public void setCollectionObject(Collection collectionObject) {
-		this.collectionObject = collectionObject;
-	}
-
 	public Bucket getBucket() {
 		return bucket;
-	}
-
-	public void setBucket(Bucket bucket) {
-		this.bucket = bucket;
 	}
 
 	public String getScope() {

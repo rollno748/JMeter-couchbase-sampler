@@ -169,8 +169,4 @@ public class BucketConfig extends ConfigTestElement
 	public String getClusterObject(){
 		return clusterObject;
 	}
-	public void setClusterObject(String clusterObject){
-		this.clusterObject = clusterObject;
-	}
-
 }
