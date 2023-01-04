@@ -28,7 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -53,19 +55,25 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	private String queryTypeValue;
 	private String query;
 	private String parameters;
-	private final int operationInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
+	private String queryTimeout;
+	private long DEFAULT_TIMEOUT=60000; // 60 secs
+	private HashMap<String, Object> map = new HashMap<String, Object>();
+	private int operationInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
 
 	@Override
 	public SampleResult sample(Entry e) {
+		if(map.size()<2){
+			this.map = (HashMap<String, Object>) JMeterContextService.getContext().getVariables().getObject(getBucketObject());
+		}
 
-		if (operationInt == 0 && this.clusterObject == null) {
-			this.clusterObject = (Cluster) JMeterContextService.getContext().getVariables()
-					.getObject("clusterObject");
+		LOGGER.info("SELECTION ::::::" + operationInt);
+
+		if (this.clusterObject == null && operationInt == 0) {
+			this.clusterObject = (Cluster) map.get("cluster");
 			LOGGER.info("Cluster object ::: " + clusterObject);
 		}
-		if (operationInt > 0 && this.bucket == null) {
-			this.bucket = (Bucket) JMeterContextService.getContext().getVariables()
-					.getObject(getBucketObject());
+		if (this.bucket == null && operationInt > 0) {
+			this.bucket = (Bucket) map.get("bucket");
 			LOGGER.info("Bucket object ::: " + bucket);
 			scopeObject = bucket.scope(getScope());
 			collectionObject = (Collection) scopeObject.collection(getCollection());
@@ -86,7 +94,7 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 			MutationResult res = this.dataOperations(operationInt, getQuery());
 			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
 		}
-		result.sampleEnd();
+		result.sampleEnd(); //End timer for RT
 		return result;
 	}
 
@@ -163,7 +171,10 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	public QueryResult queryOperations(String data){
 		QueryResult result = null;
 		try{
-			result = clusterObject.query(data, queryOptions().metrics(true));
+			result = clusterObject.query(data, queryOptions()
+					.metrics(true)
+					.readonly(true)
+					.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT)));
 		}catch (CouchbaseException ce){
 			LOGGER.info("Couchbase exception occurred while w=executing N1ql query ");
 			ce.printStackTrace();

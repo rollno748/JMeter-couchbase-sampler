@@ -34,7 +34,6 @@ public class CBSamplerBeanInfo extends BeanInfoSupport {
 		QUERYTYPEVALUE_TAGS[GET] = "queryTypeValue.get";
 		QUERYTYPEVALUE_TAGS[UPSERT] = "queryTypeValue.upsert";
 		QUERYTYPEVALUE_TAGS[REMOVE] = "queryTypeValue.remove";
-		//collection.insert();		collection.get();		collection.upsert();		collection.remove();
 	}
 
 	public CBSamplerBeanInfo() {
@@ -44,6 +43,7 @@ public class CBSamplerBeanInfo extends BeanInfoSupport {
 		createPropertyGroup("Query Arena", new String[] { QUERYTYPE_VALUE, QUERY, PARAMS });
 
 		PropertyDescriptor bucketPropDescriptor = property(BUCKET_OBJECT);
+		bucketPropDescriptor.setValue(RESOURCE_BUNDLE, getBeanDescriptor().getValue(RESOURCE_BUNDLE));
 		bucketPropDescriptor.setValue(NOT_UNDEFINED, Boolean.TRUE);
 		bucketPropDescriptor.setValue(DEFAULT, "travel-sample-bucket-object");
 		bucketPropDescriptor.setDisplayName("Bucket Object");
@@ -71,7 +71,6 @@ public class CBSamplerBeanInfo extends BeanInfoSupport {
 		queryPropDescriptor.setDisplayName("Query Type");
 		queryPropDescriptor.setShortDescription("Select the query type - kv Pair / N1QL");
 
-//		queryPropDescriptor =  property(QUERY);
 		queryPropDescriptor = property(QUERY, TypeEditor.TextAreaEditor);
 		queryPropDescriptor.setValue(NOT_UNDEFINED, Boolean.TRUE);
 		queryPropDescriptor.setValue(TEXT_LANGUAGE, "sql");

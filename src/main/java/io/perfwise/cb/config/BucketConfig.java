@@ -2,6 +2,7 @@ package io.perfwise.cb.config;
 
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 
 import com.couchbase.client.java.*;
@@ -30,11 +31,12 @@ public class BucketConfig extends ConfigTestElement
 	private String server;
 	private String bucketName;
 	private String bucketWaitUntilReadyTime;
+	private String connectionObject;
 	private String bucketObject;
-	private String clusterObject;
 	private Bucket bucket;
 	private Cluster cluster;
 	private List<VariableSettings> extraConfigs;
+	private HashMap<String, Object> objectMap = new HashMap<String, Object>();
 
 	public BucketConfig() {
 	}
@@ -65,15 +67,16 @@ public class BucketConfig extends ConfigTestElement
 			synchronized (this) {
 				try {
 					cluster = Cluster.connect("couchbases://"+ getServer(), getClusterOptions(getUsername(), getPassword()));
-					variables.putObject(clusterObject, cluster);
+					objectMap.put("cluster", cluster);
 					LOGGER.info("Connection to couchbase cluster has been established");
 					try {
 						bucket = cluster.bucket(bucketName);
 						bucket.waitUntilReady(Duration.ofSeconds(Integer.parseInt(getBucketWaitUntilReadyTime())));
-						variables.putObject(bucketObject, bucket);
+						objectMap.put("bucket", bucket);
 					} catch (CouchbaseException e) {
 						LOGGER.info("Exception while creating connection to bucket:" + e);
 					}
+					variables.putObject(bucketObject, objectMap);
 				} catch (Exception e) {
 					LOGGER.info("Failed to create couchbase cluster", e);
 					e.printStackTrace();
@@ -166,7 +169,7 @@ public class BucketConfig extends ConfigTestElement
 		this.bucketObject = bucketObject;
 	}
 
-	public String getClusterObject(){
-		return clusterObject;
+	public String getConnectionObject(){
+		return connectionObject;
 	}
 }
