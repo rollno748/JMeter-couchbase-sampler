@@ -1,6 +1,7 @@
 package io.perfwise.cb.sampler;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -8,7 +9,9 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.query.QueryResult;
 import org.apache.jmeter.config.ConfigTestElement;
 import org.apache.jmeter.engine.util.ConfigMergabilityIndicator;
@@ -29,10 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
@@ -56,50 +56,51 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	private String query;
 	private String parameters;
 	private String queryTimeout;
+	private int queryTypeInt = 0;
 	private long DEFAULT_TIMEOUT=60000; // 60 secs
 	private HashMap<String, Object> map = new HashMap<String, Object>();
-	private int operationInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
 
 	@Override
 	public SampleResult sample(Entry e) {
+		this.queryTypeInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
+		SampleResult result = new SampleResult();
+
 		if(map.size()<2){
 			this.map = (HashMap<String, Object>) JMeterContextService.getContext().getVariables().getObject(getBucketObject());
 		}
-
-		LOGGER.info("SELECTION ::::::" + operationInt);
-
-		if (this.clusterObject == null && operationInt == 0) {
+		if (this.clusterObject == null && queryTypeInt == 0) {
 			this.clusterObject = (Cluster) map.get("cluster");
 			LOGGER.info("Cluster object ::: " + clusterObject);
 		}
-		if (this.bucket == null && operationInt > 0) {
+		if (this.bucket == null && queryTypeInt > 0) {
 			this.bucket = (Bucket) map.get("bucket");
 			LOGGER.info("Bucket object ::: " + bucket);
 			scopeObject = bucket.scope(getScope());
 			collectionObject = (Collection) scopeObject.collection(getCollection());
 		}
 
-		SampleResult result = new SampleResult();
-		result.setSampleLabel(getName());
-		result.setSamplerData(requestBody());
-		result.setDataType(SampleResult.TEXT);
-		result.setContentType("text/plain");
-		result.setDataEncoding(StandardCharsets.UTF_8.name());
-		//Starting the measurement
-		result.sampleStart();
-		if(operationInt == 0){
-			QueryResult res = this.queryOperations(getQuery());
-			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
-		}else{
-			MutationResult res = this.dataOperations(operationInt, getQuery());
-			result.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
+		if (this.clusterObject != null || this.bucket != null) {
+			result.setSampleLabel(getName());
+			result.setRequestHeaders("Method : " + getQueryTypeValue());
+			result.setSamplerData(getQuery());
+			result.setDataType(SampleResult.TEXT);
+			result.setContentType("text/plain");
+			result.setDataEncoding(StandardCharsets.UTF_8.name());
+
+			//Starting the measurement
+			result.sampleStart();
+			if(queryTypeInt == 0){
+				this.queryOperations(getQuery(), result);
+			}else{
+				this.dataOperations(queryTypeInt, getQuery(), result);
+			}
+
+		} else {
+			LOGGER.info("Couchbase Client not initialised");
+			result.setResponseCode("400");
 		}
 		result.sampleEnd(); //End timer for RT
 		return result;
-	}
-
-	private String requestBody() {
-		return null;
 	}
 
 	private SampleResult handleException(SampleResult result, Exception ex) {
@@ -113,7 +114,6 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 
 	@Override
 	public void testStarted() {
-		int queryTypeInt = CBSamplerBeanInfo.getQueryTypeValueAsInt(getQueryTypeValue());
 	}
 
 	@Override
@@ -134,47 +134,93 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		return APPLIABLE_CONFIG_CLASSES.contains(guiClass);
 	}
 
-	public MutationResult dataOperations(int type, String data){
-		JsonObject content = JsonObject.fromJson(data);
-		MutationResult result = null;
+	public SampleResult dataOperations(int type, String data, SampleResult result){
+		JsonObject content = null;
+		MutationResult mutationResult = null;
+		String key = "";
+		if(type == 1 || type == 3 ){
+			content = JsonObject.fromJson(data);
+			Set<String> keys = content.getNames();
+			for(String k : keys){
+				key = k;
+			}
+		}
 
 		switch (type){
 			case CBSamplerBeanInfo.INSERT:
 				try{
-//                    result = collectionObject.insert(key, json);
-				}catch (DocumentNotFoundException ex){
-					LOGGER.info("Document not found");
+					mutationResult = collectionObject.insert(key, content.get(key), InsertOptions.insertOptions().expiry(Duration.ofSeconds(DEFAULT_TIMEOUT)));
+					result.setResponseData(mutationResult.toString(), StandardCharsets.UTF_8.name());
+					result.setResponseOK();
+				}catch (DocumentExistsException ex){
+					LOGGER.info("The document already exists!");
+					this.responseExceptionHandler(ex, result);
+				}catch (CouchbaseException ex) {
+					LOGGER.info("Something else happened: " + ex);
+					this.responseExceptionHandler(ex, result);
 				}
 				break;
 			case CBSamplerBeanInfo.GET:
-				GetResult getResult = collectionObject.get(content.getString("key"));
-//                result = getResult.contentAsObject();
+				try{
+					GetResult getResult = collectionObject.get(data);
+					result.setResponseData(getResult.contentAsObject().toString(), StandardCharsets.UTF_8.name());
+					result.setResponseOK();
+				} catch (DocumentNotFoundException dnfe){
+					LOGGER.info("Document not found!");
+					this.responseExceptionHandler(dnfe, result);
+				}
 				break;
 			case CBSamplerBeanInfo.UPSERT:
-//                result = collectionObject.upsert(key, json);
+				try{
+					mutationResult = collectionObject.upsert(key, content.get(key), UpsertOptions.upsertOptions().expiry(Duration.ofSeconds(DEFAULT_TIMEOUT)));
+					result.setResponseData(mutationResult.toString(), StandardCharsets.UTF_8.name());
+					result.setResponseOK();
+				}catch (CouchbaseException ex){
+					LOGGER.info("Couchbase exception occurred!");
+					this.responseExceptionHandler(ex, result);
+				}
 				break;
 			case CBSamplerBeanInfo.REMOVE:
 				try{
-					collectionObject.remove(content.getString("key"));
+					mutationResult = collectionObject.remove(data);
+					result.setResponseData(mutationResult.toString(), StandardCharsets.UTF_8.name());
+					result.setResponseOK();
 				}catch (DocumentNotFoundException dnfe){
 					LOGGER.error("Document not found exception " + dnfe);
+					this.responseExceptionHandler(dnfe, result);
 				}
 				break;
 			default:
 				LOGGER.info("Invalid operation Selected - Please check the sampler operation selection");
 				LOGGER.info("Aborting Test..");
-                testEnded();
+				testEnded();
 		}
+
 		return result;
 	}
 
-	public QueryResult queryOperations(String data){
-		QueryResult result = null;
+	private SampleResult responseExceptionHandler(Exception e,
+												  SampleResult result) {
+		LOGGER.info("Exception Occurred");
+		result.setSuccessful(false);
+		result.setResponseCode("500");
+		result.setResponseMessage("Exception: " + e);
+		java.io.StringWriter stringWriter = new java.io.StringWriter();
+		e.printStackTrace(new java.io.PrintWriter(stringWriter));
+		result.setResponseData(stringWriter.toString().getBytes());
+		result.setDataType(org.apache.jmeter.samplers.SampleResult.TEXT);
+		return result;
+	}
+
+	public SampleResult queryOperations(String data, SampleResult result){
+		QueryResult queryResult = null;
 		try{
-			result = clusterObject.query(data, queryOptions()
+			queryResult = clusterObject.query(data, queryOptions()
 					.metrics(true)
 					.readonly(true)
 					.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT)));
+			result.setResponseData(queryResult.rowsAsObject().toString());
+			result.setResponseOK();
 		}catch (CouchbaseException ce){
 			LOGGER.info("Couchbase exception occurred while w=executing N1ql query ");
 			ce.printStackTrace();
