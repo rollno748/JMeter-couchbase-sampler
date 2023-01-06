@@ -27,7 +27,6 @@ public class CBSamplerBeanInfo extends BeanInfoSupport {
 	static final int UPSERT = 3;
 	static final int REMOVE = 4;
 
-
 	static {
 		QUERYTYPEVALUE_TAGS[N1QL] = "queryTypeValue.n1ql";
 		QUERYTYPEVALUE_TAGS[INSERT] = "queryTypeValue.insert";
@@ -90,7 +89,6 @@ public class CBSamplerBeanInfo extends BeanInfoSupport {
 			LOGGER.debug(pubDescriptorsAsString);
 		}
 	}
-
 	public static int getQueryTypeValueAsInt(String mode) {
 		if (mode == null || mode.length() == 0) {
 			return N1QL;
@@ -102,7 +100,6 @@ public class CBSamplerBeanInfo extends BeanInfoSupport {
 		}
 		return -1;
 	}
-
 	public static String[] getQueryTypeValueTags() {
 		String[] copy = new String[QUERYTYPEVALUE_TAGS.length];
 		System.arraycopy(QUERYTYPEVALUE_TAGS, 0, copy, 0, QUERYTYPEVALUE_TAGS.length);

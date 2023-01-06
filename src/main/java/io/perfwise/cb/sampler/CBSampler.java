@@ -40,7 +40,7 @@ import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 public class CBSampler extends AbstractTestElement implements Sampler, TestBean, ConfigMergabilityIndicator, TestStateListener, TestElement, Serializable, Searchable {
 
 	private static final long serialVersionUID = 9112846706008433268L;
-	private static Logger LOGGER = LoggerFactory.getLogger(CBSampler.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(CBSampler.class);
 
 	private static final Set<String> APPLIABLE_CONFIG_CLASSES = new HashSet<>(
 			Arrays.asList("org.apache.jmeter.config.gui.SimpleConfigGui"));
@@ -55,10 +55,9 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	private String queryTypeValue;
 	private String query;
 	private String parameters;
-	private String queryTimeout;
 	private int queryTypeInt = 0;
-	private long DEFAULT_TIMEOUT=300000; // 5 mins
-	private HashMap<String, Object> map = new HashMap<String, Object>();
+	private final long DEFAULT_TIMEOUT=300000; // 5 mins
+	private HashMap<String, Object> map = new HashMap<>();
 
 	@Override
 	public SampleResult sample(Entry e) {
@@ -76,7 +75,7 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 			this.bucket = (Bucket) map.get("bucket");
 			LOGGER.info("Bucket object ::: " + bucket);
 			scopeObject = bucket.scope(getScope());
-			collectionObject = (Collection) scopeObject.collection(getCollection());
+			collectionObject = scopeObject.collection(getCollection());
 		}
 
 		if (this.clusterObject != null || this.bucket != null) {
@@ -100,15 +99,6 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 			result.setResponseCode("400");
 		}
 		result.sampleEnd(); //End timer for RT
-		return result;
-	}
-
-	private SampleResult handleException(SampleResult result, Exception ex) {
-		result.setResponseMessage("Message Publish Error");
-		result.setResponseCode("500");
-		result.setResponseData(
-				String.format("Error in publishing message to PubSub topic : %s", ex.toString()).getBytes());
-		result.setSuccessful(false);
 		return result;
 	}
 
@@ -136,7 +126,7 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 
 	public SampleResult dataOperations(int type, String data, SampleResult result){
 		JsonObject content = null;
-		MutationResult mutationResult = null;
+		MutationResult mutationResult;
 		String key = "";
 		if(type == 1 || type == 3 ){
 			content = JsonObject.fromJson(data);
@@ -217,9 +207,8 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	}
 
 	public SampleResult queryOperations(String data, SampleResult result){
-		QueryResult queryResult = null;
 		try{
-			queryResult = clusterObject.query(replaceParametersIfExist(data), queryOptions()
+			QueryResult queryResult = clusterObject.query(replaceParametersIfExist(data), queryOptions()
 					.metrics(true)
 					.readonly(true)
 					.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT)));
@@ -227,6 +216,7 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 			result.setResponseOK();
 		}catch (CouchbaseException ce){
 			LOGGER.info("Couchbase exception occurred while w=executing N1ql query ");
+			this.responseExceptionHandler(ce, result);
 			ce.printStackTrace();
 		}
 		return result;
@@ -317,24 +307,3 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		this.parameters = parameters;
 	}
 }
-
-
-
-//		if (isGzipCompression()) {
-//			byteMsg = createEventCompressed(getMessage());
-//		} else {
-//			byteMsg = ByteString.copyFromUtf8(getMessage()).toByteArray();
-//		}
-//		result.sampleStart();
-//				try {
-//			template = createPubsubMessage(byteMsg, attributes);
-//			publish(template, result);
-//				} catch (Exception ex) {
-//				LOGGER.info("Exception occurred while publishing message");
-//				result = handleException(result, ex);
-//				} finally {
-//				result.sampleEnd();
-//				}
-//		if (this.bucket == null) {
-//			this.bucket = (Bucket) JMeterContextService.getContext().getVariables().getObject(getBucketObject());
-//		}
