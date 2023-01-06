@@ -1,31 +1,50 @@
-# Jmeter Couchbase Sampler 
+# JMeter Couchbase Sampler
 
 ## Introduction
-This plugin adds feature to Jmeter to load test couchbase no sql database using couchbase sdk client library.
+This plugin adds feature to JMeter to load test couchbase (no sql database) using couchbase sdk client library.
 
 ## Jmeter Target
-1. Jmeter version 5.1.1 or above
+1. Jmeter version 5.5 or above
 2. Java 8 or above
 
 ## Required Components
 
-- DI-Jmeter
-- GCP Pubsub configs
+- Apache JMeter
+- Couchbase connection string
 
 ## Jar Dependencies Required
-* java-client-3.0.5
+* java-client-3.4.1
 
 ## Installation Instructions
 
 - Download the source code from the Gitlab.
 - Just do a mvn clean install (Git bash is required)
-- Jar will be generated under the target directory (jmeter-couchbase-sampler-1.0.jar).
+- Jar will be generated under the target directory (jmeter-couchbase-sampler-x.jar).
 - Copy the Jar to `<Jmeter Installed Directory>/lib/ext/`
 
 ## Usage Instructions
-1. Add Bucket config element
-2. Provide the required informations to connect to couchbase bucket. such as bucket name, credentials, etc.
-3. It is possible to add more than one bucket on couchbase config and use teh required bucket to process operations
+1. Add Config element -> Couchbase Config
+2. Provide the connection string details (couchbase capella/on-premise hostname, credentials, bucket, scope, collection and other connection options required)
+3. Provide a name in "**Bucket Object**" field to export the connecting object to sampler element.
+4. To establish connection with multiple bucket, add more than one config element with different object name.
+5. Add Sampler -> Couchbase sampler element in **Thread Group**
+6. provide the Exported object name in the step 3 and select the query type (N1QL/Data operations)
+7. provide scope/collection information - if required
+8. Use the query field to perform the Data Operations/Query Operations using N1QL
+
+## Data Operations
+1. Data operations enables the simplest way to retrieve or mutate data where the key is known.
+2. It covers CRUD operations, document expiration, and optimistic locking with CAS
+3. The supported CRUD operations were INSERT, GET, UPSERT, REMOVE
+4. Default timeout is set to 5 minutes for any CRUD operations
+5. The parameter field is ignored when the query type is not N1QL
+
+## SQL++ (Formerly N1QL) Operations
+- The SQL++ mode is considered to write formal SQL queries on couchbase
+- The query is always performed at the Cluster level, using the query method
+- The scope and collection parameters were ignored when the query type is selected as N1QL
+- Default query timeout is set to 5 minutes.
+
 
 ## References
 Below are the references which guided to build this plugin.
@@ -33,15 +52,13 @@ Below are the references which guided to build this plugin.
 
 
 ## 💲 Donate
-<a href="https://www.buymeacoffee.com/rollno748" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me A Coffee" style="max-width:20%;" ></a> 
+<a href="https://www.buymeacoffee.com/rollno748" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me A Coffee" style="max-width:20%;" ></a>
 
 Please rate a :star2: if you like it.
 
 Please open up a :beetle: - If you experienced something.
 
 
-## Tools used 
-* eclipse
+## Tools used
+* IntelliJ IDEA
 * Markdown editor online (https://dillinger.io/)
-
-

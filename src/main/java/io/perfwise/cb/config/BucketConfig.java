@@ -1,70 +1,94 @@
 package io.perfwise.cb.config;
 
 import java.io.Serializable;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
 
+import com.couchbase.client.java.*;
+import io.perfwise.cb.utils.VariableSettings;
 import org.apache.jmeter.config.ConfigElement;
 import org.apache.jmeter.config.ConfigTestElement;
 import org.apache.jmeter.testbeans.TestBean;
 import org.apache.jmeter.testbeans.TestBeanHelper;
 import org.apache.jmeter.testelement.TestStateListener;
-import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.jmeter.threads.JMeterVariables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.java.Bucket;
-import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.Collection;
+
+import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 
 public class BucketConfig extends ConfigTestElement
 		implements ConfigElement, TestBean, TestStateListener, Serializable {
 
 	private static final long serialVersionUID = -313826245020004586L;
-
-	private static Logger LOGGER = LoggerFactory.getLogger(BucketConfig.class);
-
-	private Cluster cluster;
-	private Bucket bucket;
-	private Collection collection;
+	private static final Logger LOGGER = LoggerFactory.getLogger(BucketConfig.class);
 
 	private String username;
 	private String password;
 	private String server;
 	private String bucketName;
+	private String bucketWaitUntilReadyTime;
+	private String connectionObject;
 	private String bucketObject;
+	private Bucket bucket;
+	private Cluster cluster;
+	private List<VariableSettings> extraConfigs;
+	private HashMap<String, Object> objectMap = new HashMap<String, Object>();
 
 	public BucketConfig() {
+	}
+	@Override
+	public void addConfigElement(ConfigElement config) {
 	}
 
 	@Override
 	public void testStarted() {
 		this.setRunningVersion(true);
 		TestBeanHelper.prepare(this);
-		JMeterVariables variables = JMeterContextService.getContext().getVariables();
+		JMeterVariables variables = getThreadContext().getVariables();
+
+		LOGGER.debug("Additional config Size::: " + getExtraConfigs().size());
+		if (getExtraConfigs().size() >= 1) {
+			LOGGER.info("Setting up Additional properties");
+			for (int i = 0; i < getExtraConfigs().size(); i++) {
+//				props.put(getExtraConfigs().get(i).getConfigKey(),
+//						getExtraConfigs().get(i).getConfigValue());
+				LOGGER.debug(
+						String.format("Adding property : %s", getExtraConfigs().get(i).getConfigKey()));
+			}
+		}
 
 		if (variables.getObject(bucketObject) != null) {
-			LOGGER.error("Couchbase connection is already established and active !!");
+			LOGGER.error("Found an active Couchbase connection !!");
 		} else {
 			synchronized (this) {
 				try {
-					cluster = Cluster.connect(server, username, password);
-					LOGGER.info("CouchbaseCluster Created");
+					cluster = Cluster.connect("couchbases://"+ getServer(), getClusterOptions(getUsername(), getPassword()));
+					objectMap.put("cluster", cluster);
+					LOGGER.info("Connection to couchbase cluster has been established");
+					try {
+						bucket = cluster.bucket(bucketName);
+						bucket.waitUntilReady(Duration.ofSeconds(Integer.parseInt(getBucketWaitUntilReadyTime())));
+						objectMap.put("bucket", bucket);
+					} catch (CouchbaseException e) {
+						LOGGER.info("Exception while creating connection to bucket:" + e);
+					}
+					variables.putObject(bucketObject, objectMap);
 				} catch (Exception e) {
 					LOGGER.info("Failed to create couchbase cluster", e);
 					e.printStackTrace();
 				}
 			}
 		}
+	}
 
-		try {
-			bucket = cluster.bucket(bucketName);
-			collection = bucket.defaultCollection();
-			variables.putObject(bucketObject, collection);
-		} catch (CouchbaseException e) {
-			LOGGER.info("Exception while creating bucket :" + e);
-
-		}
+	public ClusterOptions getClusterOptions(String username, String password){
+		return clusterOptions(username, password).environment(env -> {
+			env.applyProfile("wan-development");
+		});
 	}
 
 	@Override
@@ -76,8 +100,9 @@ public class BucketConfig extends ConfigTestElement
 	public void testEnded() {
 		try {
 			cluster.disconnect();
+			LOGGER.info("Couchbase cluster connection - Disconnected successfully !");
 		} catch (Exception e) {
-			LOGGER.info("Exception occured while closeing the connection with couchbase server");
+			LOGGER.info("Exception occurred while closing the connection with couchbase server");
 		}
 	}
 
@@ -94,14 +119,6 @@ public class BucketConfig extends ConfigTestElement
 
 	public void setServer(String server) {
 		this.server = server;
-	}
-
-	public Bucket getBucket() {
-		return bucket;
-	}
-
-	public void setBucket(Bucket bucket) {
-		this.bucket = bucket;
 	}
 
 	public String getBucketName() {
@@ -128,6 +145,22 @@ public class BucketConfig extends ConfigTestElement
 		this.password = password;
 	}
 
+	public String getBucketWaitUntilReadyTime() {
+		return bucketWaitUntilReadyTime;
+	}
+
+	public void setBucketWaitUntilReadyTime(String bucketWaitUntilReadyTime) {
+		this.bucketWaitUntilReadyTime = bucketWaitUntilReadyTime;
+	}
+
+	public List<VariableSettings> getExtraConfigs() {
+		return extraConfigs;
+	}
+
+	public void setExtraConfigs(List<VariableSettings> extraConfigs) {
+		this.extraConfigs = extraConfigs;
+	}
+
 	public String getBucketObject() {
 		return bucketObject;
 	}
@@ -136,4 +169,7 @@ public class BucketConfig extends ConfigTestElement
 		this.bucketObject = bucketObject;
 	}
 
+	public String getConnectionObject(){
+		return connectionObject;
+	}
 }
