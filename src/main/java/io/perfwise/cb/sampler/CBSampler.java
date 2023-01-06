@@ -57,7 +57,7 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	private String parameters;
 	private String queryTimeout;
 	private int queryTypeInt = 0;
-	private long DEFAULT_TIMEOUT=60000; // 60 secs
+	private long DEFAULT_TIMEOUT=300000; // 5 mins
 	private HashMap<String, Object> map = new HashMap<String, Object>();
 
 	@Override
@@ -149,7 +149,9 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 		switch (type){
 			case CBSamplerBeanInfo.INSERT:
 				try{
-					mutationResult = collectionObject.insert(key, content.get(key), InsertOptions.insertOptions().expiry(Duration.ofSeconds(DEFAULT_TIMEOUT)));
+					mutationResult = collectionObject.insert(key, content.get(key), InsertOptions
+							.insertOptions()
+							.expiry(Duration.ofSeconds(DEFAULT_TIMEOUT)));
 					result.setResponseData(mutationResult.toString(), StandardCharsets.UTF_8.name());
 					result.setResponseOK();
 				}catch (DocumentExistsException ex){
@@ -172,7 +174,9 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 				break;
 			case CBSamplerBeanInfo.UPSERT:
 				try{
-					mutationResult = collectionObject.upsert(key, content.get(key), UpsertOptions.upsertOptions().expiry(Duration.ofSeconds(DEFAULT_TIMEOUT)));
+					mutationResult = collectionObject.upsert(key, content.get(key), UpsertOptions
+									.upsertOptions()
+									.expiry(Duration.ofSeconds(DEFAULT_TIMEOUT)));
 					result.setResponseData(mutationResult.toString(), StandardCharsets.UTF_8.name());
 					result.setResponseOK();
 				}catch (CouchbaseException ex){
@@ -215,7 +219,7 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 	public SampleResult queryOperations(String data, SampleResult result){
 		QueryResult queryResult = null;
 		try{
-			queryResult = clusterObject.query(data, queryOptions()
+			queryResult = clusterObject.query(replaceParametersIfExist(data), queryOptions()
 					.metrics(true)
 					.readonly(true)
 					.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT)));
@@ -226,6 +230,26 @@ public class CBSampler extends AbstractTestElement implements Sampler, TestBean,
 			ce.printStackTrace();
 		}
 		return result;
+	}
+
+	private String replaceParametersIfExist(String data) {
+		if(!getParameters().isEmpty()){
+			String[] parameters = getParameters().split(",");
+			StringBuilder sb = new StringBuilder();
+			char param = '?';
+			int paramIdx = 0;
+
+			for (int i = 0; i < data.length(); i++) {
+				if (data.charAt(i) == param) {
+					sb.append(parameters[paramIdx]);
+					paramIdx++;
+				}else {
+					sb.append(data.charAt(i));
+				}
+			}
+			return sb.toString();
+		}
+		return data;
 	}
 
 	//Getters & Setters
