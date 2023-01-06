@@ -9,8 +9,7 @@
 	<properties>
 		<jmeter-version>5.5</jmeter-version>
 		<jmeter.lib.scope>provided</jmeter.lib.scope>
-		<maven.compiler.target>1.8</maven.compiler.target>
-		<maven.compiler.source>1.8</maven.compiler.source>
+		<jdk.version>1.8</jdk.version>
 		<cb-sdk-version>3.4.1</cb-sdk-version>
 	</properties>
 
@@ -44,26 +43,12 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>2.3</version>
 				<configuration>
-					<source>${maven.compiler.source}</source>
-					<target>${maven.compiler.target}</target>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
 					<optimize>true</optimize>
 					<showDeprecation>true</showDeprecation>
 					<showWarnings>true</showWarnings>
 				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.2</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>
