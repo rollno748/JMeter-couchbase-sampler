@@ -13,7 +13,10 @@ This plugin adds feature to JMeter to load test couchbase (no sql database) usin
 - Couchbase connection string
 
 ## Jar Dependencies Required
-* java-client-3.4.1
+* java-client-3.4.1 (lib/ext)
+* core-io-2.4.1 (lib)
+* reactor-core-3.5.0 (lib)
+* reactive-streams-1.0.4 (lib)
 
 ## Installation Instructions
 
