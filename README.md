@@ -54,8 +54,9 @@ Below are the references which guided to build this plugin.
 - [x] https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html
 
 
-## 💲 Donate
-<a href="https://www.buymeacoffee.com/rollno748" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me A Coffee" style="max-width:20%;" ></a>
+## 💲 Support Me
+[<a href="https://www.buymeacoffee.com/rollno748" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="45px" width="162px" alt="Buy Me A Coffee"></a>](https://www.buymeacoffee.com/rollno748)
+
 
 Please rate a :star2: if you like it.
 
